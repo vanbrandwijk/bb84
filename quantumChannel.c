@@ -5,7 +5,14 @@
 #include "bb84.h"
 
 #define STATE_DONE 0
-#define STATE_QREADREADY 1
+#define STATE_QBASEREADREADY 1
+#define STATE_QBITSREADREADY 2
+#define STATE_MBASEREADREADY 3
+#define STATE_MBITSWRITE 4
+#define MESSAGE_RESET 0
+#define MESSAGE_OK 1
+#define QPORT 31415
+#define MPORT 7071
 
 void error(char *msg)
 {
@@ -20,23 +27,40 @@ int main(int argc, char *argv[])
 {
         BitArray writeBits, writeBases, meassureBases, meassureBits;
 
-     int sockfd, newsockfd, portno = 31415, clilen;
-     char buffer[256];
-     struct sockaddr_in serv_addr, cli_addr;
+        int qmsock, mmsock, qssock, mssock, clilen;
+     struct sockaddr_in cli_addr;
      int i, n, state;
 
-        sockfd = connectSocket(portno);
+        qmsock = connectSocket(QPORT);
+        mmsock = connectSocket(MPORT);
 
-     listen(sockfd,5);
+     listen(qmsock,5);
      clilen = sizeof(cli_addr);
-     newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-     if (newsockfd < 0)
+     qssock = accept(qmsock, (struct sockaddr *) &cli_addr, &clilen);
+     if (qssock < 0)
           error("ERROR on accept");
 
-        state = STATE_QREADREADY;
+        state = STATE_QBASEREADREADY;
 
         while ( state != STATE_DONE ) {
-                writeBits = readBitArray(newsockfd);
+                switch ( state ) {
+                        case STATE_QBASEREADREADY:
+                                writeBases = readBitArray(qssock);
+                                state = STATE_QBITSREADREADY;
+                                break;
+                        case STATE_QBITSREADREADY:
+                                writeBits = readBitArray(qssock);
+                                //load register
+                                state = STATE_MBASEREADREADY;
+                                break;
+                        case STATE_MBASEREADREADY:
+                                meassureBases = readBitArray(mssock);
+                                //measure register along bases
+                                //send bits response
+                                break;
+                        default:
+                                break;
+                }
 
                 for ( i = 0; i < BIT_ARRAY_LENGTH; i++ ) {
                         printf("%i", writeBits.bitArray[i].bit);
