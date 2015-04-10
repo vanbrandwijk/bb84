@@ -72,6 +72,30 @@ void sendQuReg(int sendSock, quantum_reg *reg) {
 }
 
 void receiveQuReg(int receiveSock, quantum_reg *reg) {
+	quantum_matrix m;
+	char buffer[BIT_ARRAY_LENGTH];
+	int i, j, rows, cols;
+	float realPart, imagPart;
+	COMPLEX_FLOAT a;
+	
+	read(receiveSock, buffer, sizeof(float));
+	cols = atoi(buffer);
+	
+	read(receiveSock, buffer, sizeof(float));
+	rows = atoi(buffer);
+	
+	printf("cols: %f, rows: %f\n", cols, rows);
+	m = quantum_new_matrix(cols, rows);
+	
+	for ( i = 0; i < rows; i ++ ) {
+		for ( j = 0; j < cols; j++ ) {
+			read(receiveSock, buffer, sizeof(float));
+			realPart = atof(buffer);
+			read(receiveSock, buffer, sizeof(float));
+			imagPart = atof(buffer);
+			//m.t[j + i * cols] =
+		}
+	}
 }
 
 BitArray readBitArray(int socket) {
