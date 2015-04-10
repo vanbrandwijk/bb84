@@ -34,13 +34,9 @@ typedef struct {
 	Bit key[KEY_LENGTH+BIT_ARRAY_LENGTH*4];
 } BB84Key;
 
-typedef struct {
-	unsigned int type;
-} BB84NetworkMessage;
-
 //Generate a stream of bits - either random or all zeros if the second
 //parameter is > 0
-BitArray generateBitStream(int length, int allZeros);
+BitArray generateBitStream(int length);
 
 //Encode a stream of bits to qbits into rectangular and diagonal polarizations,
 //given an array of bits, an array of bases, and the quantum register in which
