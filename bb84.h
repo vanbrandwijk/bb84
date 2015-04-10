@@ -1,6 +1,13 @@
 #include <stdlib.h>
 #include <quantum.h>
 
+#define STATE_INITIAL 0
+#define STATE_KEYEX_INITIATED 1
+#define STATE_KEYEX_QBITS_SENT 2
+#define STATE_KEYEX_COMPLETE 128
+
+#define BB84_PORT (int)7071
+
 //The bit array length defines the width of the quantum register needed on
 //either side of the transaction.  This width should be scaled to the available
 //quantum register implementation, but must be in agreement on each side.
