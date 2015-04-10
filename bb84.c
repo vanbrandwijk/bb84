@@ -69,15 +69,9 @@ BitArray decodeQBitStream(BitArray basis, quantum_reg *reg) {
 	return bits_decoded;
 }
 
-//Send & recieve quantum data
-int sendQuantum(quantum_reg reg) {
-	return 0;
+void initializeBitArray(BitArray *b) {
+	int i;
+	for ( i = 0; i < BIT_ARRAY_LENGTH; i++ ) {
+		(*b).bitArray[i].bit = 0;
+	}
 }
-int recieveQuantum(quantum_reg *reg);
-
-//Send & recieve classical data
-int sendClassic(BitArray s_bits) {
-	return 0;
-}
-int recieveClassic(BitArray r_bits);
-

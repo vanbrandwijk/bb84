@@ -44,10 +44,4 @@ void encodeQBitStream(BitArray bits, BitArray basis, quantum_reg *reg);
 //decode, and the quantum register.  Return the decoded bits
 BitArray decodeQBitStream(BitArray basis, quantum_reg *reg);
 
-//Send & recieve quantum data
-int sendQuantum(quantum_reg reg);
-int recieveQuantum(quantum_reg *reg);
-
-//Send & recieve classical data
-int sendClassic(BitArray s_bits);
-int recieveClassic(BitArray r_bits);
+void initializeBitArray(BitArray *b);

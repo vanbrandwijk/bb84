@@ -1,89 +1,77 @@
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
+#include <string.h>
+#include <netdb.h>
 #include "bb84.h"
+#include "quantumChannel.h"
 
-#define STATE_DONE 0
-#define STATE_QBASEREADREADY 1
-#define STATE_QBITSREADREADY 2
-#define STATE_MBASEREADREADY 3
-#define STATE_MBITSWRITE 4
-#define MESSAGE_RESET 0
-#define MESSAGE_OK 1
-#define QPORT 31415
-#define MPORT 7071
-
-void error(char *msg)
-{
-    perror(msg);
-    exit(1);
-}
-
-int connectSocket(int port);
-BitArray readBitArray(int socket);
-
-int main(int argc, char *argv[])
-{
-        BitArray writeBits, writeBases, meassureBases, meassureBits;
-
-        int qmsock, mmsock, qssock, mssock, clilen;
-     struct sockaddr_in cli_addr;
-     int i, n, state;
-
-        qmsock = connectSocket(QPORT);
-        mmsock = connectSocket(MPORT);
-
-     listen(qmsock,5);
-     clilen = sizeof(cli_addr);
-     qssock = accept(qmsock, (struct sockaddr *) &cli_addr, &clilen);
-     if (qssock < 0)
-          error("ERROR on accept");
-
-        state = STATE_QBASEREADREADY;
-
-        while ( state != STATE_DONE ) {
-                switch ( state ) {
-                        case STATE_QBASEREADREADY:
-                                writeBases = readBitArray(qssock);
-                                state = STATE_QBITSREADREADY;
-                                break;
-                        case STATE_QBITSREADREADY:
-                                writeBits = readBitArray(qssock);
-                                //load register
-                                state = STATE_MBASEREADREADY;
-                                break;
-                        case STATE_MBASEREADREADY:
-                                meassureBases = readBitArray(mssock);
-                                //measure register along bases
-                                //send bits response
-                                break;
-                        default:
-                                break;
-                }
-
-                for ( i = 0; i < BIT_ARRAY_LENGTH; i++ ) {
-                        printf("%i", writeBits.bitArray[i].bit);
-                }
-                printf("\n");
-        }
-
-     return 0;
-}
-
-int connectSocket(int port) {
-     struct sockaddr_in socketAddress;
-     int socketID = socket(AF_INET, SOCK_STREAM, 0);
-     if (socketID < 0)
-        error("ERROR opening socket");
-     bzero((char *) &socketAddress, sizeof(socketAddress));
-     socketAddress.sin_family = AF_INET;
-     socketAddress.sin_addr.s_addr = INADDR_ANY;
-     socketAddress.sin_port = htons(port);
-     if (bind(socketID, (struct sockaddr *) &socketAddress, sizeof(socketAddress)) < 0)
-              error("ERROR on binding");
+int connectListenerSocket(int port) {
+	struct sockaddr_in socketAddress;
+	int socketID = socket(AF_INET, SOCK_STREAM, 0);
+	bzero((char *) &socketAddress, sizeof(socketAddress));
+	socketAddress.sin_family = AF_INET;
+	socketAddress.sin_addr.s_addr = INADDR_ANY;
+	socketAddress.sin_port = htons(port);
+	bind(socketID, (struct sockaddr *) &socketAddress, sizeof(socketAddress)); 
 
         return socketID;
+}
+
+int connectChannel_server(int listenerSocket) {
+	int channelSocket, clilen;
+	struct sockaddr_in cli_addr;
+	
+	listen(listenerSocket,0);
+
+	clilen = sizeof(cli_addr);
+	channelSocket = accept(listenerSocket, (struct sockaddr *) &cli_addr, &clilen);
+	return channelSocket;
+}
+
+int connectChannel_client(char *serverName, int port) {
+	int channelSocket;
+	struct sockaddr_in serverAddress;
+	struct hostent *server;
+
+	channelSocket = socket(AF_INET, SOCK_STREAM, 0);
+	server = gethostbyname(serverName);
+
+	bzero((char *) &serverAddress, sizeof(serverAddress));
+
+	serverAddress.sin_family = AF_INET;
+	bcopy((char *)server->h_addr, 
+		(char *)&serverAddress.sin_addr.s_addr, server->h_length);
+	serverAddress.sin_port = htons(port);
+
+	connect(channelSocket, 
+		(struct sockaddr *) &serverAddress, sizeof(serverAddress));
+
+	return channelSocket;
+}
+
+void sendQuReg(int sendSock, quantum_reg *reg) {
+	quantum_matrix m;
+	char buffer[BIT_ARRAY_LENGTH];
+	int i, j;
+
+	sprintf(buffer, "SIG %i", SIG_SENDING_QUREG);
+	write(sendSock, buffer, sizeof(buffer));
+
+	m = quantum_qureg2matrix((*reg));
+
+	write(sendSock, &(m.cols), sizeof(m.cols));
+	write(sendSock, &(m.rows), sizeof(m.rows));
+
+	for ( i = 0; i < m.rows; i++) {
+		for ( j = 0; j < m.cols; j++) {
+			COMPLEX_FLOAT a = m.t[j + i * m.cols];
+			write(sendSock, creal(a), sizeof(float));
+			write(sendSock, cimag(a), sizeof(float));
+		}
+	}
+	sprintf(buffer, "SIG %i", SIG_END_QUREG);
+	write(sendSock, buffer, sizeof(buffer));
+}
+
+void receiveQuReg(int receiveSock, quantum_reg *reg) {
 }
 
 BitArray readBitArray(int socket) {
@@ -91,10 +79,10 @@ BitArray readBitArray(int socket) {
         char buffer[BIT_ARRAY_LENGTH + 1];
         int i, n;
 
+	initializeBitArray(&readBitArray);
         bzero(buffer, BIT_ARRAY_LENGTH + 1);
 
         n = read(socket, buffer, BIT_ARRAY_LENGTH + 1);
-        if ( n < 0 ) error("ERROR reading from socket");
 
         for ( i = 0; i < BIT_ARRAY_LENGTH; i++ ) {
                 switch ( buffer[i] ) {
@@ -108,3 +96,4 @@ BitArray readBitArray(int socket) {
         }
         return readBitArray;
 }
+
