@@ -75,3 +75,14 @@ void initializeBitArray(BitArray *b) {
 		(*b).bitArray[i].bit = 0;
 	}
 }
+
+void printBitArray(BitArray b, char zeros, char ones) {
+	int i;
+	for ( i = 0; i < BIT_ARRAY_LENGTH; i++ ) {
+		if ( b.bitArray[i].bit == 0 ) { 
+			printf(zeros); 
+		} else {
+			printf(ones);
+		}
+	}
+}
