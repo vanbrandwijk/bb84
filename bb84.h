@@ -52,3 +52,4 @@ void encodeQBitStream(BitArray bits, BitArray basis, quantum_reg *reg);
 BitArray decodeQBitStream(BitArray basis, quantum_reg *reg);
 
 void initializeBitArray(BitArray *b);
+void printBitArray(BitArray b, char zeros, char ones);
