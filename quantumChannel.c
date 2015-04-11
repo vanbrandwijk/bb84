@@ -1,6 +1,13 @@
+#include <arpa/inet.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <complex.h>
+#include <unistd.h>
 #include <string.h>
 #include <netdb.h>
-#include "bb84.h"
 #include "quantumChannel.h"
 
 int connectListenerSocket(int port) {
@@ -11,6 +18,10 @@ int connectListenerSocket(int port) {
 	socketAddress.sin_addr.s_addr = INADDR_ANY;
 	socketAddress.sin_port = htons(port);
 	bind(socketID, (struct sockaddr *) &socketAddress, sizeof(socketAddress)); 
+
+	if ( socketID < 0 ) {
+		printf("ERROR listening on socket\n");
+	}
 
         return socketID;
 }
@@ -23,6 +34,12 @@ int connectChannel_server(int listenerSocket) {
 
 	clilen = sizeof(cli_addr);
 	channelSocket = accept(listenerSocket, (struct sockaddr *) &cli_addr, &clilen);
+
+	if ( channelSocket < 0 ) {
+		printf("ERROR connecting channel socket\n");
+		exit(1);
+	}
+
 	return channelSocket;
 }
 
@@ -49,65 +66,55 @@ int connectChannel_client(char *serverName, int port) {
 
 void sendQuReg(int sendSock, quantum_reg *reg) {
 	quantum_matrix m;
-	char buffer[BIT_ARRAY_LENGTH];
+	char numBuffer[32];
 	int i, j;
-
-	sprintf(buffer, "SIG %i", SIG_SENDING_QUREG);
-	write(sendSock, buffer, sizeof(buffer));
+	float real, imag;
 
 	m = quantum_qureg2matrix((*reg));
 
-	write(sendSock, &(m.cols), sizeof(m.cols));
-	write(sendSock, &(m.rows), sizeof(m.rows));
+	send(sendSock, &(m.cols), sizeof(m.cols), 0);
+	send(sendSock, &(m.rows), sizeof(m.rows), 0);
 
 	for ( i = 0; i < m.rows; i++) {
 		for ( j = 0; j < m.cols; j++) {
 			COMPLEX_FLOAT a = m.t[j + i * m.cols];
-			write(sendSock, creal(a), sizeof(float));
-			write(sendSock, cimag(a), sizeof(float));
+			real = creal(a);
+			imag = cimag(a);
+			sprintf(numBuffer, "%f %f\n", real, imag);
+			send(sendSock, numBuffer, sizeof(numBuffer), 0);
 		}
 	}
-	sprintf(buffer, "SIG %i", SIG_END_QUREG);
-	write(sendSock, buffer, sizeof(buffer));
 }
 
-void receiveQuReg(int receiveSock, quantum_reg *reg) {
+quantum_reg receiveQuReg(int receiveSock) {
 	quantum_matrix m;
-	char buffer[BIT_ARRAY_LENGTH];
+	char numBuffer[32];
 	int i, j, rows, cols;
 	float realPart, imagPart;
 	COMPLEX_FLOAT a;
-	
-	read(receiveSock, buffer, sizeof(float));
-	cols = atoi(buffer);
-	
-	read(receiveSock, buffer, sizeof(float));
-	rows = atoi(buffer);
-	
-	printf("cols: %f, rows: %f\n", cols, rows);
+
+	recv(receiveSock, &cols, sizeof(int), 0);
+	recv(receiveSock, &rows, sizeof(int), 0);
 	m = quantum_new_matrix(cols, rows);
-	
 	for ( i = 0; i < rows; i ++ ) {
 		for ( j = 0; j < cols; j++ ) {
-			read(receiveSock, buffer, sizeof(float));
-			realPart = atof(buffer);
-			read(receiveSock, buffer, sizeof(float));
-			imagPart = atof(buffer);
-			//m.t[j + i * cols] =
+			recv(receiveSock, numBuffer, sizeof(numBuffer), MSG_WAITALL);
+			sscanf(numBuffer, "%f %f", &realPart, &imagPart);
+			m.t[j + i * cols] = realPart + imagPart * I;
 		}
 	}
+	return quantum_matrix2qureg(&m, BIT_ARRAY_LENGTH); 
 }
 
-BitArray readBitArray(int socket) {
+BitArray readBitArray(int receiveSock) {
         BitArray readBitArray;
         char buffer[BIT_ARRAY_LENGTH + 1];
         int i, n;
 
 	initializeBitArray(&readBitArray);
-        bzero(buffer, BIT_ARRAY_LENGTH + 1);
+        bzero(&buffer, BIT_ARRAY_LENGTH + 1);
 
-        n = read(socket, buffer, BIT_ARRAY_LENGTH + 1);
-
+        n = recv(receiveSock, buffer, sizeof(buffer), 0);
         for ( i = 0; i < BIT_ARRAY_LENGTH; i++ ) {
                 switch ( buffer[i] ) {
                         case '1':
@@ -121,3 +128,37 @@ BitArray readBitArray(int socket) {
         return readBitArray;
 }
 
+void sendBitArray(int sendSock, BitArray b) {
+	char buffer[BIT_ARRAY_LENGTH];
+	int i;
+
+	for ( i = 0; i < BIT_ARRAY_LENGTH; i++) {
+		buffer[i] = b.bitArray[i].bit + '0';
+	}
+	send(sendSock, buffer, sizeof(buffer), 0);
+}
+
+void sendSignal(int sigSocket, int signal) {
+	char buffer[BIT_ARRAY_LENGTH];
+	bzero(&buffer, sizeof(buffer));
+
+	sprintf(buffer, "SIGNAL %i", signal);
+	send(sigSocket, buffer, sizeof(buffer), 0);
+} 
+
+void waitSignal(int sigSocket, int signal) {
+	int n;
+	char buffer[BIT_ARRAY_LENGTH];
+	char sigString[BIT_ARRAY_LENGTH];
+
+	sprintf(sigString, "SIGNAL %i", signal);
+
+	while ( 1 ) {
+		bzero(&buffer, sizeof(buffer));
+	        n = recv(sigSocket, buffer, sizeof(buffer), 0);
+		
+		if ( strcmp(buffer, sigString) == 0 ) {
+			break;
+		}
+	}
+}
