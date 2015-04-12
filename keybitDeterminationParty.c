@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <openssl/sha.h>
 #include "quantumChannel.h"
 
 static const char PARTY_NAME[] = "Bob";
@@ -16,6 +17,7 @@ int main(int argc, char *argv[]) {
 	
 	BitArray decodeBasis, decodedBits, decodeResponse;
 	BB84Key key;
+	char finalKey[SHA512_DIGEST_LENGTH];
 	quantum_reg reg;
 
 	srand(time(0));
@@ -69,9 +71,15 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	printf("%s's key:\n", PARTY_NAME);
-	for ( i = 0; i < ki; i++ ) {
-		printf("%i", key.key[i].bit);
+	//perform error checking
+	
+	//perform privacy amplification
+	privacyAmp(key, &finalKey);
+
+	printf("%s's privacy amplified key: \n", PARTY_NAME);
+
+	for ( i = 0; i < sizeof(finalKey); i++ ) {
+		printf("%02x", finalKey[i] & 0xff);
 	}
 	printf("\n");
 }

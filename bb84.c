@@ -3,6 +3,9 @@
 #include <time.h>
 #include <quantum.h>
 #include <math.h>
+#include <unistd.h>
+#include <openssl/sha.h>
+#include <string.h>
 #include "bb84.h"
 
 BitArray generateBitStream(int length, int allZeros) {
@@ -85,4 +88,16 @@ void printBitArray(BitArray b, char zeros, char ones) {
 			printf("%c", ones);
 		}
 	}
+}
+
+void privacyAmp(BB84Key k, char *hash) {
+	char buffer[KEY_LENGTH+1];
+	int i;
+
+	for ( i = 0; i < KEY_LENGTH; i++ ) {
+		sprintf(&buffer[i], "%i", k.key[i].bit);
+		
+	}
+
+	SHA512(buffer, sizeof(buffer), hash);	
 }
