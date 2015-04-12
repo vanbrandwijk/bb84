@@ -72,7 +72,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	//perform error checking
-	
+	printf("Error occurance: %f\n", doErrorCheck(channelSocket, key));	
+
 	//perform privacy amplification
 	privacyAmp(key, &finalKey);
 

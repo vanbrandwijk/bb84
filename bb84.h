@@ -4,6 +4,7 @@
 #define STATE_INITIAL 0
 #define STATE_KEYEX_INITIATED 1
 #define STATE_KEYEX_QBITS_SENT 2
+#define STATE_KEYEX_EC 3
 #define STATE_KEYEX_COMPLETE 128
 
 #define SIG_RESET 0
@@ -13,6 +14,8 @@
 #define SIG_SENDINGAGREE 4
 
 #define BB84_PORT (int)31415
+
+#define BB84_ERROR_TOLERANCE (float).02
 
 //The bit array length defines the width of the quantum register needed on
 //either side of the transaction.  This width should be scaled to the available

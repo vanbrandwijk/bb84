@@ -9,3 +9,4 @@ quantum_reg receiveQuReg(int receiveSock);
 void sendBitArray(int sendSock, BitArray b);
 void sendSignal(int sigSocket, int signal);
 void waitSignal(int sigSocket, int signal);
+float doErrorCheck(int channelSocket, BB84Key k);

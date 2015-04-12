@@ -162,3 +162,26 @@ void waitSignal(int sigSocket, int signal) {
 		}
 	}
 }
+
+float doErrorCheck(int channelSocket, BB84Key k) {
+	int i, j, totalError = 0;
+	BitArray b, bRemote;
+	int numArrays = ( KEY_LENGTH_RAW - KEY_LENGTH ) / BIT_ARRAY_LENGTH;
+
+	for ( i = 0; i < numArrays; i++ ) {
+		initializeBitArray(&b);
+		for ( j = 0; j < BIT_ARRAY_LENGTH; j++ ) {
+			b.bitArray[j].bit = k.key[KEY_LENGTH + BIT_ARRAY_LENGTH * i + j].bit;
+		}
+		sendBitArray(channelSocket, b);
+		bRemote = readBitArray(channelSocket);
+
+		for ( j = 0; j < BIT_ARRAY_LENGTH; j++ ) {
+			if ( b.bitArray[j].bit != bRemote.bitArray[j].bit ) {
+				totalError++;
+			}
+		}
+	}
+
+	return (float)(totalError / (numArrays * BIT_ARRAY_LENGTH));
+}

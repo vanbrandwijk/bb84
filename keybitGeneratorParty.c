@@ -82,6 +82,7 @@ int main() {
 	}
 
 	//perform error checking
+	printf("Error occurance: %f\n", doErrorCheck(channelSocket, key));	
 	
 	//perform privacy amplification
 	privacyAmp(key, &finalKey);
